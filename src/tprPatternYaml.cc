@@ -119,7 +119,7 @@ void TprPatternYaml::SetupMsgNoDelay(uint32_t no_delay)
  
 void     TprPatternYaml::TrainingStream(void)
 {
-    char *_T_STREAM = ">>*TSTREAM*<<"; 
+    const char *_T_STREAM = ">>*TSTREAM*<<";
     _stream_size = _stream->write((uint8_t*) _T_STREAM, (uint64_t) strlen(_T_STREAM), CTimeout());
 }
 uint32_t TprPatternYaml::Read(void *buf, int stream_size)
@@ -131,7 +131,7 @@ uint32_t TprPatternYaml::Read(void *buf, int stream_size)
 
 int TprPatternYaml::PrintPattern(TprStream *p, uint32_t size)
 {
-    char *tcross[4] = { "RTM_IN0", "FPGA_IN", "BP_IN", "RTM_IN1" };
+    const char *tcross[4] = { "RTM_IN0", "FPGA_IN", "BP_IN", "RTM_IN1" };
     printf("Timing Crossbar status: RTM_Out to %s, FPGA_Out to %s, BP_DIST0 to %s, BP_DIST1 to %s\n",
            tcross[GetOutputConfig0()],
            tcross[GetOutputConfig1()],
@@ -139,9 +139,9 @@ int TprPatternYaml::PrintPattern(TprStream *p, uint32_t size)
            tcross[GetOutputConfig3()]);
     
     printf("Stream Training Status: (destination IP %u, destination port %u)\n", GetDestinationIp(), GetDestinationPort());
-    printf("LCLS1 Timing Pattern (location: %8.8x, size: %u)\n", p, size);
+    printf("LCLS1 Timing Pattern (location: %8p, size: %u)\n", p, size);
     printf("receiving counter: %u\n", _read_cnt);
-    printf("pulse id: %lu\n", p->pulse_id);
+    printf("pulse id: %llu\n", (unsigned long long)p->pulse_id);
     for(int i =0; i< 8; i++) printf("event code mask [%d]: %8.8x\n", i, p->event_code[i]);
     printf("dtype/version: %u/%u\n", p->dtype, p->version);
     for(int i =0; i<6; i++) printf("modifier [%d]: %8.8x\n", i, p->dmod[i]);
