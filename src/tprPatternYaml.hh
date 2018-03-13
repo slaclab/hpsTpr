@@ -24,7 +24,7 @@ namespace Tpr {
         uint32_t edef_major;
         uint32_t edef_init;
     };
-#pragma pack (back)
+#pragma pack (pop)
 
 #define TPR_STREAM_SIZE   sizeof(Tpr::TprStream)
     
