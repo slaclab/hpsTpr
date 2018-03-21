@@ -88,7 +88,7 @@ TprTriggerYaml::TprTriggerYaml(Path core)
 
 void TprTriggerYaml::InitLCLS1Mode(void)
 {
-     uint32_t zero(0), one(1), dontcare(0x20000);
+     uint32_t zero(0), dontcare(0x20000);
     _clkSel->setVal(&zero);         /* Select LCLS1 mode clock */
     
     for(uint32_t i = 0; i < NUM_CHANNELS; i++) {
@@ -99,7 +99,7 @@ void TprTriggerYaml::InitLCLS1Mode(void)
 
 void TprTriggerYaml::InitLCLS2Mode(void)
 {
-    uint32_t zero(0), one(1);
+    uint32_t one(1);
     _clkSel->setVal(&one);      /* Select LCLS2 mode clock */
     
     
@@ -117,7 +117,7 @@ void TprTriggerYaml::SetClkSel(uint32_t clock_mode)
 void TprTriggerYaml::SetMsgDelay(uint32_t delay_ticks)
 {
     _msgDelay->setVal(&delay_ticks);
-    if(_debug_) printf("TprTriggerYaml (%p): set msg delay (%8.8x) %lu\n", this, delay_ticks, delay_ticks);
+    if(_debug_) printf("TprTriggerYaml (%p): set msg delay (%8.8lx) %lu\n", this, (unsigned long)delay_ticks, (unsigned long)delay_ticks);
 }
 
 void TprTriggerYaml::ChannelEnable(int channel, uint32_t enable)
@@ -223,14 +223,14 @@ void TprTriggerYaml::SetDelay(int trigger, uint32_t delay_ticks)
 {
     _trgDelay[trigger]->setVal(&delay_ticks);
     
-    if(_debug_) printf("TprTriggerYaml (%p): delay (trg %x, delay %8.8x) %lu\n", this, trigger, delay_ticks, delay_ticks);
+    if(_debug_) printf("TprTriggerYaml (%p): delay (trg %x, delay %8.8lx) %lu\n", this, trigger, (unsigned long)delay_ticks, (unsigned long)delay_ticks);
 }
 
 void TprTriggerYaml::SetWidth(int trigger, uint32_t width_ticks)
 {
     _trgWidth[trigger]->setVal(&width_ticks);
     
-    if(_debug_) printf("TprTriggerYaml (%p): width (trg %x, width %8.8x) %lu\n", this, trigger, width_ticks, width_ticks);
+    if(_debug_) printf("TprTriggerYaml (%p): width (trg %x, width %8.8lx) %lu\n", this, trigger, (unsigned long)width_ticks, (unsigned long)width_ticks);
 }  
 
 

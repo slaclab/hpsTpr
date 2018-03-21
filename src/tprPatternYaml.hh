@@ -66,7 +66,7 @@ namespace Tpr {
             void     SetupMsgNoDelay(uint32_t no_delay);
             
             void     TrainingStream(void);
-            uint32_t Read(void *buf, int stream_length);
+            void     Read(TprStream *buf, int stream_length);
             int PrintPattern(TprStream *p, uint32_t size); 
 
     };

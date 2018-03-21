@@ -5,6 +5,7 @@
 #include <tprPatternYaml.hh>
 
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
 
 using namespace Tpr;
@@ -93,7 +94,7 @@ uint32_t TprPatternYaml::GetOutputConfig3(void)
 
 void TprPatternYaml::SetupTimingFrameInput(uint32_t input)
 {
-    uint32_t zero(0), one(1), two(2), three(3);
+    uint32_t zero(0), one(1), two(2);
     if(input == 0) {
         // using TpgMini /* 0, 1, 0, 0  */
          _outputConfig0->setVal(&zero);
@@ -122,11 +123,22 @@ void     TprPatternYaml::TrainingStream(void)
     const char *_T_STREAM = ">>*TSTREAM*<<";
     _stream_size = _stream->write((uint8_t*) _T_STREAM, (uint64_t) strlen(_T_STREAM), CTimeout());
 }
-uint32_t TprPatternYaml::Read(void *buf, int stream_size)
+
+void TprPatternYaml::Read(TprStream *buf, int stream_size)
 {
-    _stream_size  =  _stream->read((uint8_t*) buf, (uint64_t) stream_size, CTimeout());
-    _p_stream_buf = (TprStream*) buf;
-    _read_cnt ++;
+union {
+  uint16_t s;
+  uint8_t  c[2];
+} test = { s: 1 };
+
+	if ( test.c[1] ) {
+		fprintf(stderr,"Big-Endian not supported\n");
+		std::terminate();
+	} else {
+		_stream_size  =  _stream->read((uint8_t*) buf, (uint64_t) stream_size, CTimeout());
+		_p_stream_buf =  buf;
+		_read_cnt ++;
+	}
 }
 
 int TprPatternYaml::PrintPattern(TprStream *p, uint32_t size)
