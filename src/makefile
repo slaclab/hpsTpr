@@ -15,7 +15,7 @@ include $(CPSW_DIR)/defs.mak
 INSTALL_DIR=../
 
 #HEADERS = RamControl.hh TPGMini.hh TPG.hh AmcCarrier.hh
-CXXFLAGS = -g -DFRAMEWORK_R3_4
+CXXFLAGS += -g -DFRAMEWORK_R3_4
 HEADERS = tprPatternYaml.hh  tprTriggerYaml.hh
 hpstpr_SRCS += tprPatternYaml.cc  tprTriggerYaml.cc
 
