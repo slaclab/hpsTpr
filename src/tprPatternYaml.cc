@@ -94,7 +94,7 @@ uint32_t TprPatternYaml::GetOutputConfig3(void)
 
 void TprPatternYaml::SetupTimingFrameInput(uint32_t input)
 {
-    uint32_t zero(0), one(1), two(2), three(3);
+    uint32_t zero(0), one(1), two(2);
     if(input == 0) {
         // using TpgMini /* 0, 1, 0, 0  */
          _outputConfig0->setVal(&zero);
