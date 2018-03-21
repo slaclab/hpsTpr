@@ -1,1 +1,13 @@
+R1.0.0      March 21, 2018     Kukhee Kim (KHKIM)
+
+    Merge Till's branch 'ts_fixed_warnings'
+
+    Fixed (harmless) compiler warnings
+    Changed arg to TprPatternYaml::Read() from uint8_t* to TprStream*
+    Must add to, not replace the CXXFLAGS (optimization was lost)
+    Fixed #pragma(back) -> #pragma(pop)
+    buf fix for pragma pack (pop)
+    Fixed compiler warnings
+
+
 Feb 27, 2018   Prepare Initial Release
