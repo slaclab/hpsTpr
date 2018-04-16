@@ -1,3 +1,7 @@
+R1.0.1      April 11, 2018     Kukhee Kim (KHKIM)
+     Remove default setting for crossbar switch
+     Assume crossbarControl module will setup the crossbar switch properly
+
 R1.0.0      March 23, 2018     T. Straumann
     
     use cpsw framework R3.6.4
