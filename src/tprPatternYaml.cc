@@ -25,7 +25,7 @@ TprPatternYaml::TprPatternYaml(Path core, Path tstream)
     _read_cnt = 0;
     
     // SetupTimingFrameInput(0); /* use TPGMini timing frame from FPGA */
-    SetupTimingFrameInput(1); /* use timing from backplane */
+    // SetupTimingFrameInput(1); /* use timing from backplane */
     
     // SetupMsgNoDelay(0);    /* delay 3 fiducials for LCLS1 timing pattern delivery */
     SetupMsgNoDelay(1);    /* prompt delivery for LCLS1 timing pattern */
