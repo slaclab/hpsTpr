@@ -1,3 +1,6 @@
+R1.0.1      April 20, 2018     Kukhee Kim (KHKIM)
+     remove force setting for msgNoDelay (LCLS1 timing pattern), and force tag to R1.0.1
+
 R1.0.1      April 11, 2018     Kukhee Kim (KHKIM)
      Remove default setting for crossbar switch
      Assume crossbarControl module will setup the crossbar switch properly
