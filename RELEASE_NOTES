@@ -1,3 +1,6 @@
+R1.0.2      September 18, 2018 Kukhee Kim (KHKIM)
+     build with cpsw/framework R3.6.6
+
 R1.0.1      April 20, 2018     Kukhee Kim (KHKIM)
      remove force setting for msgNoDelay (LCLS1 timing pattern), and force tag to R1.0.1
 
