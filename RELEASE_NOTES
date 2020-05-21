@@ -4,7 +4,8 @@ ued_support  May 20, 2002 Kukhee Kim (khkim)
      branch out from R1.1.0 to support UED mode
      - using LCLS1 clock rate, but using LCLS2 timing decoding
      - need to set up clock rate and decoding independantly
-
+       . add new API: SetModeSel - (timing decoding: 0: LCLS1 style, 1: LCLS2 style)
+                      SetModeSelEn - (0: backward compatible, using ClkSel, 1: new mode, ClkSel and ModeSel are independent)
 
 R1.1.0      Jan 29, 2020   Kukhee Kim (khkim)
      build with cpsw/framework R4.4.1 and buildroot-2019.08
