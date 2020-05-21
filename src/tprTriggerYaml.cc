@@ -50,6 +50,8 @@ TprTriggerYaml::TprTriggerYaml(Path core)
     _rxPolarity    = IScalVal   ::create(_path_timingFrameRx->findByName("RxPolarity"));
     _rxReset       = IScalVal   ::create(_path_timingFrameRx->findByName("RxReset"));
     _clkSel        = IScalVal   ::create(_path_timingFrameRx->findByName("ClkSel"));
+    _modeSel       = IScalVal   ::create(_path_timingFrameRx->findByName("ModeSel"));
+    _modeSelEn     = IScalVal   ::create(_path_timingFrameRx->findByName("ModeSelEn"));
     _rxDown        = IScalVal   ::create(_path_timingFrameRx->findByName("RxDown"));
     _bypassRst     = IScalVal   ::create(_path_timingFrameRx->findByName("BypassRst"));
     _versionErr    = IScalVal_RO::create(_path_timingFrameRx->findByName("VersionErr"));
@@ -111,6 +113,22 @@ void TprTriggerYaml::SetClkSel(uint32_t clock_mode)
     _clkSel->setVal(clock_mode? &one:&zero);
     
     if(_debug_) printf("TprTriggerYaml (%p): set cls_sel (%8.8x)\n", this, clock_mode?one:zero);
+}
+
+void TprTriggerYaml::SetModeSel(uint32_t mode)
+{
+    uint32_t zero(0), one(1);
+    _modeSel->setVal(mode? &one:&zero);
+
+    if(_debug_) printf("TprTriggerYaml (%p): set mode_sel (%8.8x)\n", this, mode?one:zero);
+}
+
+void TprTriggerYaml::SetModeSelEn(uint32_t enable)
+{
+    uint32_t zero(0), one(1);
+    _modeSelEn->setVal(enable? &one:&zero);
+
+    if(_debug_) printf("TprTriggerYaml (%p): set mode_sel_en (%8.8x)\n", this, enable?one:zero);
 }
 
 

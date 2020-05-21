@@ -43,6 +43,8 @@ namespace Tpr {
             ScalVal        _rxPolarity;
             ScalVal        _rxReset;
             ScalVal        _clkSel;
+            ScalVal        _modeSel;
+            ScalVal        _modeSelEn;
             ScalVal        _rxDown;
             ScalVal        _bypassRst;
             ScalVal_RO     _versionErr;
@@ -80,6 +82,8 @@ namespace Tpr {
             void InitLCLS2Mode(void);
             
             void SetClkSel(uint32_t clock_mode);
+            void SetModeSel(uint32_t mode);
+            void SetModeSelEn(uint32_t enable);
             void SetMsgDelay(uint32_t delay_ticks);
             
             /* Set channel control registers */
