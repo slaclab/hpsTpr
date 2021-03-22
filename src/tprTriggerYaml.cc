@@ -20,22 +20,62 @@
 
 using namespace Tpr;
 
-TprTriggerYaml::TprTriggerYaml(Path core)
+TprTriggerYaml::TprTriggerYaml(Path core, int bus)
 {
+     if(!bus) bus_type = _atca;
+     else     bus_type = _pcie;
+
+    switch(bus_type) {
+        case _atca:
+            num_channels = NUM_CHANNELS;
+            num_triggers = NUM_TRIGGERS;
+            break;
+        case _pcie:
+            num_channels = PCIE_NUM_CHANNELS;
+            num_triggers = PCIE_NUM_TRIGGERS;
+            break;
+    }
+
+
+
     _path               = core;
     _path_axiVersion    = _path->findByName("AxiVersion");
     _path_axiSy56040    = _path->findByName("AxiSy56040");
-    _path_timingFrameRx = _path->findByName("AmcCarrierTiming/TimingFrameRx");
 
-    for(int i = 0; i < NUM_CHANNELS; i++) {
+    switch(bus_type) {
+        case _atca:
+            CPSW_TRY_CATCH(_path_timingFrameRx = _path->findByName("AmcCarrierTiming/TimingFrameRx"));
+            break;
+        case _pcie:
+            CPSW_TRY_CATCH(_path_timingFrameRx = _path->findByName("TimingCore"));
+            break;
+    }
+
+    for(int i = 0; i < num_channels; i++) {
         char path_name[128];
-        sprintf(path_name, "AmcCarrierTiming/EvrV2CoreTriggers/EvrV2ChannelReg[%d]", i);
+
+        switch(bus_type) {
+            case _atca:
+                sprintf(path_name, "AmcCarrierTiming/EvrV2CoreTriggers/EvrV2ChannelReg[%d]", i);
+                break;
+            case _pcie:
+                sprintf(path_name, "EvrChannels/Channels[%d]", i);
+                break;
+        }
         CPSW_TRY_CATCH(_path_evrV2ChnReg[i] = _path->findByName(path_name));
     }
 
-    for(int i = 0; i < NUM_TRIGGERS; i++) {
+    for(int i = 0; i < num_triggers; i++) {
         char path_name[128];
-        sprintf(path_name, "AmcCarrierTiming/EvrV2CoreTriggers/EvrV2TriggerReg[%d]", i);
+
+        switch(bus_type) {
+            case _atca:
+                sprintf(path_name, "AmcCarrierTiming/EvrV2CoreTriggers/EvrV2TriggerReg[%d]", i);
+                break;
+            case _pcie:
+                sprintf(path_name, "EvrChannels/Triggers[%d]", i);
+                break;
+        }
         CPSW_TRY_CATCH(_path_evrV2TrgReg[i] = _path->findByName(path_name));
     }
 
@@ -74,7 +114,7 @@ TprTriggerYaml::TprTriggerYaml(Path core)
     CPSW_TRY_CATCH(_bypassResetCount = IScalVal_RO::create(_path_timingFrameRx->findByName("BypassResetCount")));
     CPSW_TRY_CATCH(_frameVersion     = IScalVal_RO::create(_path_timingFrameRx->findByName("FrameVersion")));
     
-    for(int i = 0; i < NUM_CHANNELS; i++) {
+    for(int i = 0; i < num_channels; i++) {
         CPSW_TRY_CATCH(_chnEnable[i]         = IScalVal   ::create(_path_evrV2ChnReg[i]->findByName("Enable")));
         CPSW_TRY_CATCH(_chnBsaEnable[i]      = IScalVal   ::create(_path_evrV2ChnReg[i]->findByName("BsaEnabled")));
         CPSW_TRY_CATCH(_chnDmaEnable[i]      = IScalVal   ::create(_path_evrV2ChnReg[i]->findByName("DmaEnabled")));
@@ -86,7 +126,7 @@ TprTriggerYaml::TprTriggerYaml(Path core)
         CPSW_TRY_CATCH(_chnBsaWindowWidth[i] = IScalVal   ::create(_path_evrV2ChnReg[i]->findByName("BsaWindowWidth")));   
     }
     
-    for(int i = 0; i < NUM_TRIGGERS; i++) {
+    for(int i = 0; i < num_triggers; i++) {
         CPSW_TRY_CATCH(_trgEnable[i]           = IScalVal   ::create(_path_evrV2TrgReg[i]->findByName("Enable")));
         CPSW_TRY_CATCH(_trgSourceMask[i]       = IScalVal   ::create(_path_evrV2TrgReg[i]->findByName("Source")));
         CPSW_TRY_CATCH(_trgPolarity[i]         = IScalVal   ::create(_path_evrV2TrgReg[i]->findByName("Polarity")));
@@ -107,7 +147,7 @@ void TprTriggerYaml::InitLCLS1Mode(void)
     uint32_t zero(0), dontcare(0x20000);
     CPSW_TRY_CATCH(_clkSel->setVal(&zero));         /* Select LCLS1 mode clock */
     
-    for(uint32_t i = 0; i < NUM_CHANNELS; i++) {
+    for(uint32_t i = 0; i < num_channels; i++) {
         CPSW_TRY_CATCH(_chnDestSelect[i]->setVal(&dontcare));  /* destination, don't care */
         CPSW_TRY_CATCH(_trgSourceMask[i]->setVal(&i));         /* one to one mapping between channel and trigger */
     }
@@ -154,8 +194,10 @@ void TprTriggerYaml::SetMsgDelay(uint32_t delay_ticks)
 
 void TprTriggerYaml::ChannelEnable(int channel, uint32_t enable)
 {
+    if(channel >= num_channels) return;
+
     uint32_t zero(0), one(1);
-    
+   
     CPSW_TRY_CATCH(_chnEnable[channel]->setVal(enable?&one:&zero));
     
     if(_debug_) printf("TprTriggerYaml (%p): set channel enable (chn %x, enable %x)\n", this, channel, enable?one:zero); 
@@ -164,6 +206,8 @@ void TprTriggerYaml::ChannelEnable(int channel, uint32_t enable)
 
 void TprTriggerYaml::SetEventCode(int channel, uint32_t event)
 {
+    if(channel >= num_channels) return;
+
     uint32_t  _dontcare(0x20000);
     CPSW_TRY_CATCH(_chnDestSelect[channel]->setVal(&_dontcare));
     uint32_t _event = (0x00000002<<11) | (0x000003ff & event);
@@ -177,6 +221,8 @@ void TprTriggerYaml::SetEventCode(int channel, uint32_t event)
 
 void TprTriggerYaml::SetFixedRate(int channel, uint32_t rate)
 {
+    if(channel >= num_channels) return;
+
     uint32_t _rate = (0x000000<<11) | (0x0000000f & rate);
     CPSW_TRY_CATCH(_chnRateSelect[channel]->setVal(&_rate));
     
@@ -185,6 +231,8 @@ void TprTriggerYaml::SetFixedRate(int channel, uint32_t rate)
 
 void TprTriggerYaml::SetACRate(int channel, uint32_t ts_mask, uint32_t rate)
 {
+    if(channel >= num_channels) return;
+
     uint32_t _rate = (0x00000001<<11) | (0x0000003f & ts_mask)<< 3 | (0x00000007 & rate);
     CPSW_TRY_CATCH(_chnRateSelect[channel]->setVal(&_rate));
     
@@ -193,6 +241,8 @@ void TprTriggerYaml::SetACRate(int channel, uint32_t ts_mask, uint32_t rate)
 
 void TprTriggerYaml::SetSeqBit(int channel, uint32_t seq_bit)
 {
+    if(channel >= num_channels) return;
+
     uint32_t _seq_bit = (0x00000002<<11) | (0x000003ff & seq_bit);
     CPSW_TRY_CATCH(_chnRateSelect[channel]->setVal(&_seq_bit));
     
@@ -201,6 +251,8 @@ void TprTriggerYaml::SetSeqBit(int channel, uint32_t seq_bit)
 
 void TprTriggerYaml::SetInclusionMask(int channel, uint32_t dest_mask)
 {
+    if(channel >= num_channels) return;
+
     uint32_t _mask = (0x00000000<<16) | (0x0000ffff & dest_mask);
     CPSW_TRY_CATCH(_chnDestSelect[channel]->setVal(&_mask));
     
@@ -209,6 +261,8 @@ void TprTriggerYaml::SetInclusionMask(int channel, uint32_t dest_mask)
 
 void TprTriggerYaml::SetExclusionMask(int channel, uint32_t dest_mask)
 {
+    if(channel >= num_channels) return;
+
     uint32_t _mask = (0x00000001<<16) | (0x0000ffff & dest_mask);
     CPSW_TRY_CATCH(_chnDestSelect[channel]->setVal(&_mask));
     
@@ -217,6 +271,8 @@ void TprTriggerYaml::SetExclusionMask(int channel, uint32_t dest_mask)
 
 void TprTriggerYaml::SetDontCareMask(int channel)
 {
+    if(channel >= num_channels) return;
+
     uint32_t _mask = (0x00000002<<16);
     CPSW_TRY_CATCH(_chnDestSelect[channel]->setVal(&_mask));
     
@@ -225,6 +281,8 @@ void TprTriggerYaml::SetDontCareMask(int channel)
 
 void TprTriggerYaml::TriggerEnable(int trigger, uint32_t enable)
 {
+    if(trigger >= num_triggers) return;
+
     uint32_t zero(0), one(1);
     
     CPSW_TRY_CATCH(_trgEnable[trigger]->setVal(enable?&one:&zero));
@@ -234,6 +292,8 @@ void TprTriggerYaml::TriggerEnable(int trigger, uint32_t enable)
 
 void TprTriggerYaml::SetSourceMask(int trigger, uint32_t source)
 {
+    if(trigger >= num_triggers) return;
+
     //uint32_t _source = 0x00000001 << source;
     uint32_t _source = 0x0000000f & source;
     
@@ -244,6 +304,8 @@ void TprTriggerYaml::SetSourceMask(int trigger, uint32_t source)
 
 void TprTriggerYaml::SetPolarity(int trigger, uint32_t polarity)
 {
+    if(trigger >= num_triggers) return;
+
     uint32_t falling(0), rising(1);
     
     CPSW_TRY_CATCH(_trgPolarity[trigger]->setVal(!polarity?&falling:&rising));
@@ -253,6 +315,8 @@ void TprTriggerYaml::SetPolarity(int trigger, uint32_t polarity)
 
 void TprTriggerYaml::SetDelay(int trigger, uint32_t delay_ticks)
 {
+    if(trigger >= num_triggers) return;
+
     CPSW_TRY_CATCH(_trgDelay[trigger]->setVal(&delay_ticks));
     
     if(_debug_) printf("TprTriggerYaml (%p): delay (trg %x, delay %8.8lx) %lu\n", this, trigger, (unsigned long)delay_ticks, (unsigned long)delay_ticks);
@@ -260,6 +324,8 @@ void TprTriggerYaml::SetDelay(int trigger, uint32_t delay_ticks)
 
 void TprTriggerYaml::SetWidth(int trigger, uint32_t width_ticks)
 {
+    if(trigger >= num_triggers) return;
+
     CPSW_TRY_CATCH(_trgWidth[trigger]->setVal(&width_ticks));
     
     if(_debug_) printf("TprTriggerYaml (%p): width (trg %x, width %8.8lx) %lu\n", this, trigger, (unsigned long)width_ticks, (unsigned long)width_ticks);
@@ -267,6 +333,8 @@ void TprTriggerYaml::SetWidth(int trigger, uint32_t width_ticks)
 
 void TprTriggerYaml::SetComplTrg(int trigger, uint32_t comp)
 {
+    if(trigger >= num_triggers) return;
+
     uint32_t disable(0), enable(1), compl_or(0), compl_and(1);
     _compltrg comm = (_compltrg) comp;
 
@@ -305,7 +373,7 @@ void TprTriggerYaml::report(void)
     printf("\tFrame Version Error:  %s\n", versionErr()?"Error":"Good");
     printf("\tFrame Version:        %8.8x\n", frameVersion());
     
-    for(int i = 0; i < NUM_CHANNELS; i++) {
+    for(int i = 0; i < num_channels; i++) {
         printf("\tChannel [%x]\n", i);
         printf("\t\tEnable:             %8.8x\n", channelEnable(i));
         printf("\t\tRate Select:        %8.8x\n", channelRateSelect(i));
@@ -313,7 +381,7 @@ void TprTriggerYaml::report(void)
         printf("\t\tChannel Count:      %8.8x\n", channelCount(i));  
     }
     
-    for(int i =0; i < NUM_TRIGGERS; i++) {
+    for(int i =0; i < num_triggers; i++) {
         printf("\tTrigger [%x]\n", i);
         printf("\t\tEnable:             %8.8x\n", triggerEnable(i));
         printf("\t\tSource Mask:        %8.8x\n", triggerSourceMask(i));
@@ -326,6 +394,8 @@ void TprTriggerYaml::report(void)
 
 uint32_t TprTriggerYaml::channelEnable(int channel)
 {
+    if(channel >= num_channels)  return -1;
+
     uint32_t        val;
     IndexRange      rng(0);
     
@@ -336,6 +406,8 @@ uint32_t TprTriggerYaml::channelEnable(int channel)
 
 uint32_t TprTriggerYaml::channelRateSelect(int channel)
 {
+    if(channel >= num_channels)  return -1;
+
     uint32_t        val;
     IndexRange      rng(0);
     
@@ -346,6 +418,8 @@ uint32_t TprTriggerYaml::channelRateSelect(int channel)
 
 uint32_t TprTriggerYaml::channelDestSelect(int channel)
 {
+    if(channel >= num_channels)  return -1;
+
     uint32_t        val;
     IndexRange      rng(0);
     
@@ -356,6 +430,8 @@ uint32_t TprTriggerYaml::channelDestSelect(int channel)
 
 uint32_t TprTriggerYaml::channelCount(int channel)
 {
+    if(channel >= num_channels)  return -1;
+
     uint32_t      val;
     IndexRange    rng(0);
     
@@ -366,6 +442,8 @@ uint32_t TprTriggerYaml::channelCount(int channel)
 
 uint32_t TprTriggerYaml::triggerEnable(int trigger)
 {
+    if(trigger >= num_triggers) return -1;
+
     uint32_t      val;
     IndexRange    rng(0);
     
@@ -376,6 +454,8 @@ uint32_t TprTriggerYaml::triggerEnable(int trigger)
 
 uint32_t TprTriggerYaml::triggerSourceMask(int trigger)
 {
+    if(trigger >= num_triggers) return -1;
+
     uint32_t      val;
     IndexRange    rng(0);
     
@@ -386,6 +466,8 @@ uint32_t TprTriggerYaml::triggerSourceMask(int trigger)
 
 uint32_t TprTriggerYaml::triggerPolarity(int trigger)
 {
+    if(trigger >= num_triggers) return -1;
+
     uint32_t      val;
     IndexRange    rng(0);
     
@@ -397,6 +479,8 @@ uint32_t TprTriggerYaml::triggerPolarity(int trigger)
 
 uint32_t TprTriggerYaml::triggerWidth(int trigger)
 {
+    if(trigger >= num_triggers) return -1;
+
     uint32_t      val;
     IndexRange    rng(0);
     
@@ -407,6 +491,8 @@ uint32_t TprTriggerYaml::triggerWidth(int trigger)
 
 uint32_t TprTriggerYaml::triggerDelay(int trigger)
 {
+    if(trigger >= num_triggers) return -1;
+
     uint32_t      val;
     IndexRange    rng(0);
     

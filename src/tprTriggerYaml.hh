@@ -10,15 +10,20 @@
 #define NUM_CHANNELS 16
 #define NUM_TRIGGERS 16
 
-
+#define PCIE_NUM_CHANNELS 12
+#define PCIE_NUM_TRIGGERS 12
 
 namespace Tpr {
 
     typedef enum { _disable, _or, _and } _compltrg;
+    typedef enum { _atca, _pcie } _busType;
        
 
     class TprTriggerYaml {
         protected:
+            _busType   bus_type;
+            int        num_channels;
+            int        num_triggers;
             /* required paths */
             Path _path;
             Path _path_axiVersion;
@@ -83,7 +88,7 @@ namespace Tpr {
 
         public:
             int _debug_;
-            TprTriggerYaml(Path core);
+            TprTriggerYaml(Path core, int bus = 0);
             void InitLCLS1Mode(void);
             void InitLCLS2Mode(void);
             
