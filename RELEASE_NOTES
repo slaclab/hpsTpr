@@ -1,5 +1,6 @@
 pcie_support Mar 22, 2021     Kukhee Kim
-         -branch out from R1.2.0 to support PCIe TPR
+         - branch out from R1.2.0 to support PCIe TPR
+         - implement complementary trigger
 
 R1.2.0      Mar 1, 2021   Kukhee Kim
          merge ued_support branch

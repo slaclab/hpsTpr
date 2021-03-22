@@ -14,6 +14,9 @@
 
 namespace Tpr {
 
+    typedef enum { _disable, _or, _and } _compltrg;
+       
+
     class TprTriggerYaml {
         protected:
             /* required paths */
@@ -72,6 +75,9 @@ namespace Tpr {
             ScalVal        _trgWidth[NUM_TRIGGERS];
             ScalVal        _trgDelayTap[NUM_TRIGGERS];
             ScalVal_RO     _trgDelayTapReadback[NUM_TRIGGERS];
+
+            ScalVal        _trgComplEnable[NUM_TRIGGERS];
+            ScalVal        _trgComplAnd[NUM_TRIGGERS];
             
 
 
@@ -102,6 +108,7 @@ namespace Tpr {
             void SetPolarity(int trigger, uint32_t polarity);
             void SetDelay(int trigger, uint32_t delay_ticks);
             void SetWidth(int trigger, uint32_t width_ticks);
+            void SetComplTrg(int trigger, uint32_t comp);
             
             void report(void);
             

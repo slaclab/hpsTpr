@@ -82,6 +82,8 @@ TprTriggerYaml::TprTriggerYaml(Path core)
         _trgWidth[i]            = IScalVal   ::create(_path_evrV2TrgReg[i]->findByName("Width"));
         _trgDelayTap[i]         = IScalVal   ::create(_path_evrV2TrgReg[i]->findByName("DelayTap"));
         _trgDelayTapReadback[i] = IScalVal_RO::create(_path_evrV2TrgReg[i]->findByName("DelayTapReadback"));
+        _trgComplEnable[i]      = IScalVal   ::create(_path_evrV2TrgReg[i]->findByName("ComplEn"));
+        _trgComplAnd[i]         = IScalVal   ::create(_path_evrV2TrgReg[i]->findByName("ComplAnd"));
     }
 
 
@@ -251,6 +253,29 @@ void TprTriggerYaml::SetWidth(int trigger, uint32_t width_ticks)
     if(_debug_) printf("TprTriggerYaml (%p): width (trg %x, width %8.8lx) %lu\n", this, trigger, (unsigned long)width_ticks, (unsigned long)width_ticks);
 }  
 
+void TprTriggerYaml::SetComplTrg(int trigger, uint32_t comp)
+{
+    uint32_t disable(0), enable(1), compl_or(0), compl_and(1);
+    _compltrg comm = (_compltrg) comp;
+
+    switch(comm) {
+        case _disable:
+            _trgComplEnable[trigger]->setVal(&disable);
+            break;
+        case _or:
+            _trgComplEnable[trigger]->setVal(&enable);
+            _trgComplAnd[trigger]->setVal(&compl_or);
+            break;
+        case _and:
+            _trgComplEnable[trigger]->setVal(&enable);
+            _trgComplAnd[trigger]->setVal(&compl_and);
+            break;
+        default:
+            break;
+    }
+
+    if(_debug_) printf("TprTriggerYaml (%d): compl_trigger(trg %x, comm %8.8lx)\n", this, trigger, (unsigned long) comp);
+}
 
 void TprTriggerYaml::report(void)
 {
@@ -377,6 +402,7 @@ uint32_t TprTriggerYaml::triggerDelay(int trigger)
     
     return val;
 }
+
 
 
 uint32_t TprTriggerYaml::fpgaVersion(void)
