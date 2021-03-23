@@ -359,6 +359,16 @@ void TprTriggerYaml::SetComplTrg(int trigger, uint32_t comp)
 
 void TprTriggerYaml::report(void)
 {
+    char *str_bus_type;
+    switch(bus_type) {
+        case _atca:
+            str_bus_type = "ATCA TPR";
+            break;
+        case _pcie:
+            str_bus_type = "PCIe TPR";
+            break;
+    }
+    printf("\t%s\n", str_bus_type);
     printf("\tFPGA version: %8.8x\n", fpgaVersion()); 
     printf("\tUpTime count: %8.8x\n", upTimeCount());
     printf("\tStart of Frame count: %8.8x\n", sofCount());

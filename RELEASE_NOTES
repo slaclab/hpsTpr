@@ -3,6 +3,7 @@ pcie_support Mar 22, 2021     Kukhee Kim
          - implement complementary trigger
          - add cpsw_try_catch() to specify the exact location when error occurrs
          - make dynamic path and channel number allocation to support both ATCA and PCIe
+         - improve report function to specify bus type (ATCA or PCIe)
 
 R1.2.0      Mar 1, 2021   Kukhee Kim
          merge ued_support branch
