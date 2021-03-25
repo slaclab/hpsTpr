@@ -38,15 +38,17 @@ TprTriggerYaml::TprTriggerYaml(Path core, int bus)
 
 
 
-    _path               = core;
-    _path_axiVersion    = _path->findByName("AxiVersion");
-    _path_axiSy56040    = _path->findByName("AxiSy56040");
+    CPSW_TRY_CATCH(_path               = core);
+    CPSW_TRY_CATCH(_path_axiVersion    = _path->findByName("AxiVersion"));
+
 
     switch(bus_type) {
         case _atca:
+            CPSW_TRY_CATCH(_path_axiSy56040    = _path->findByName("AxiSy56040"));
             CPSW_TRY_CATCH(_path_timingFrameRx = _path->findByName("AmcCarrierTiming/TimingFrameRx"));
             break;
         case _pcie:
+            CPSW_TRY_CATCH(_path_axiSy56040    = _path->findByName("SfpXbar"));
             CPSW_TRY_CATCH(_path_timingFrameRx = _path->findByName("TimingCore"));
             break;
     }
