@@ -114,6 +114,8 @@ namespace Tpr {
             void SetDelay(int trigger, uint32_t delay_ticks);
             void SetWidth(int trigger, uint32_t width_ticks);
             void SetComplTrg(int trigger, uint32_t comp);
+            void SetDelayTap(int trigger, uint32_t taps);
+
             
             void report(void);
             

@@ -359,6 +359,14 @@ void TprTriggerYaml::SetComplTrg(int trigger, uint32_t comp)
     if(_debug_) printf("TprTriggerYaml (%d): compl_trigger(trg %x, comm %8.8lx)\n", this, trigger, (unsigned long) comp);
 }
 
+void TprTriggerYaml::SetDelayTap(int trigger, uint32_t tap)
+{
+    if(trigger >= num_triggers) return;
+
+    if(tap > 62) tap = 62;
+    CPSW_TRY_CATCH(_trgDelayTap[trigger]->setVal(&tap));
+}
+
 void TprTriggerYaml::report(void)
 {
     char *str_bus_type;
