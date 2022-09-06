@@ -16,7 +16,7 @@ INSTALL_DIR=../
 
 #HEADERS = RamControl.hh TPGMini.hh TPG.hh AmcCarrier.hh
 CXXFLAGS += -g -DFRAMEWORK_R3_4
-HEADERS = tprPatternYaml.hh  tprTriggerYaml.hh
+HEADERS = tprPatternYaml.hh  tprTriggerYaml.hh  tprsh.hh
 hpstpr_SRCS += tprPatternYaml.cc  tprTriggerYaml.cc
 
 STATIC_LIBRARIES+=hpstpr
