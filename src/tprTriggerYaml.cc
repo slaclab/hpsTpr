@@ -390,6 +390,7 @@ void TprTriggerYaml::report(void)
     printf("\tRX 8b/10b Decode Error count: %8.8x\n", rxDecErrCount());
     printf("\tRX Disparity Error count:     %8.8x\n", rxDspErrCount());
     printf("\tRX Link Up status:    %s\n", rxLinkStatus()?"Up":"Down");
+    printf("\tTX Clock count:       %8.8x\n", txClkCount());
     printf("\tFrame Version Error:  %s\n", versionErr()?"Error":"Good");
     printf("\tFrame Version:        %8.8x\n", frameVersion());
     
@@ -594,6 +595,18 @@ uint32_t TprTriggerYaml::rxClkCount(void)
     
     return val;
 }
+
+uint32_t TprTriggerYaml::txClkCount(void)
+{
+    uint32_t      val;
+    IndexRange    rng(0);
+    
+    
+    CPSW_TRY_CATCH(_txClkCount->getVal(&val,1,&rng));
+    
+    return val;
+}
+
 
 uint32_t TprTriggerYaml::rxRstCount(void)
 {

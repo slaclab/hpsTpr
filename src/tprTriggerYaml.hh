@@ -137,6 +137,7 @@ namespace Tpr {
             uint32_t fidCount(void);
             uint32_t crcErrCount(void);
             uint32_t rxClkCount(void);
+            uint32_t txClkCount(void);
             uint32_t rxRstCount(void);
             uint32_t rxDecErrCount(void);
             uint32_t rxDspErrCount(void);
