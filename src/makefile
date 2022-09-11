@@ -1,7 +1,7 @@
 #
 # Disable CCACHE
 CCACHE_DISABLE=1
-#LDFLAGS += -Wl,-Bstatic -static-libgcc
+LDFLAGS += -Wl,-Bstatic -static-libgcc
 #LDFLAGS += -Wl,-Bstatic
 #
 CPSW_DIR=/afs/slac/g/lcls/package/cpsw/framework/R4.4.1/src
@@ -21,6 +21,15 @@ hpstpr_SRCS += tprPatternYaml.cc  tprTriggerYaml.cc
 
 STATIC_LIBRARIES+=hpstpr
 
+
+PromLoad_SRCS = McsRead.cpp EvrCardG2Prom.cpp PromLoad.cpp
+PromLoad_LIBS = $(CPSW_LIBS)
+PROGRAMS    += PromLoad
+
+
+PromVerify_SRCS = McsRead.cpp EvrCardG2Prom.cpp PromVerify.cpp
+PromVerify_LIBS = $(CPSW_LIBS)
+PROGRAMS    += PromVerify
 
 #tpr_stream_SRCS = tpr_stream.cc
 #tpr_stream_LIBS = $(CPSW_LIBS)
