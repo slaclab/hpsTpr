@@ -10,7 +10,7 @@
 #define NUM_CHANNELS 16
 #define NUM_TRIGGERS 16
 
-#define PCIE_NUM_CHANNELS 12
+#define PCIE_NUM_CHANNELS 14
 #define PCIE_NUM_TRIGGERS 12
 
 namespace Tpr {
