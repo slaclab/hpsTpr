@@ -1,3 +1,8 @@
+R2.4.0       Oct 6, 2022      Kukhee Kim
+            - import tprtest, a command line tool for PCIe TPR test
+            remarks) since, theres is no API changes, we do not need to rebuild
+                     tprTrigger module with this version
+
 R2.3.0       Sep 14, 2022     Kukhee Kim
             -extend channel number upto 13 for PCIe TPR (ch12 and ch13 for internal use)
 
