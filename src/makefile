@@ -31,6 +31,9 @@ PromVerify_SRCS = McsRead.cpp EvrCardG2Prom.cpp PromVerify.cpp
 PromVerify_LIBS = $(CPSW_LIBS)
 PROGRAMS    += PromVerify
 
+tprtest_SRCS = tprtest.cc tpr.cc
+PROGRAMS    += tprtest
+
 #tpr_stream_SRCS = tpr_stream.cc
 #tpr_stream_LIBS = $(CPSW_LIBS)
 #PROGRAMS    += tpr_stream
