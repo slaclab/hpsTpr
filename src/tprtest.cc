@@ -368,7 +368,8 @@ void frame_capture(TprReg& reg, char tprid, TimingMode tmode )
   do {
     printf("allrp %llx  q.allwp[%d] %llx\n", allrp, idx, q.allwp[idx]);
     while(allrp < q.allwp[idx] && nframes<10) {
-      const uint32_t* p = reinterpret_cast<const uint32_t*>
+      const uint32_t* p;
+        p = (const uint32_t *)
         (&q.allq[q.allrp[idx].idx[allrp &(MAX_TPR_ALLQ-1)] &(MAX_TPR_ALLQ-1) ].word[0]);
       if (verbose)
         dump_frame(p);
@@ -397,7 +398,8 @@ void frame_capture(TprReg& reg, char tprid, TimingMode tmode )
   nframes = 0;
   do {
     while(bsarp < q.bsawp && nframes<10) {
-      const uint32_t* p = reinterpret_cast<const uint32_t*>
+      const uint32_t* p;
+        p = (const uint32_t *)
         (&q.bsaq[bsarp &(MAX_TPR_BSAQ-1)].word[0]);
       if (parse_bsa_control(p, pulseId, timeStamp, init, minor, major)) {
         printf(" 0x%016llx %9u.%09u I%016llx m%016llx M%016llx\n",
