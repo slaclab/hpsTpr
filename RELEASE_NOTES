@@ -1,3 +1,6 @@
+R2.5.0       Apr 12, 2023     Kukhee Kim
+             - add SetPartition method to the tprTrigger (requested by Mike Browne)
+
 R2.4.0       Oct 6, 2022      Kukhee Kim
             - import tprtest, a command line tool for PCIe TPR test
             remarks) since, theres is no API changes, we do not need to rebuild

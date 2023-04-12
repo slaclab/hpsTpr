@@ -105,6 +105,7 @@ namespace Tpr {
             void SetSeqBit(int channel, uint32_t seq_bit);
             void SetInclusionMask(int channel, uint32_t mask);
             void SetExclusionMask(int channel, uint32_t mask);
+            void SetPartition(int channel, uint32_t partition);
             void SetDontCareMask(int channel);
             
             /* Set trigger control registers */
@@ -115,6 +116,7 @@ namespace Tpr {
             void SetWidth(int trigger, uint32_t width_ticks);
             void SetComplTrg(int trigger, uint32_t comp);
             void SetDelayTap(int trigger, uint32_t taps);
+
 
             
             void report(void);

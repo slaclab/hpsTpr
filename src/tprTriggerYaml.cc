@@ -271,6 +271,16 @@ void TprTriggerYaml::SetExclusionMask(int channel, uint32_t dest_mask)
     if(_debug_) printf("TprTriggerYaml (%p): dest select (excusion) (chn %x, dest select %8.8x)\n", this, channel, _mask);
 }
 
+void TprTriggerYaml::SetPartition(int channel, uint32_t partition)
+{
+    if(channel >= num_channels) return;
+
+    uint32_t _part = (0x00000003<<11) | (0x0000000f & partition);
+    CPSW_TRY_CATCH(_chnRateSelect[channel]->setVal(&_part));
+   
+    if(_debug_) printf("TprTriggerYaml (%p): rate select (Partition) (chn %x, rate select %8.8x)\n", this, channel, _part);
+}
+
 void TprTriggerYaml::SetDontCareMask(int channel)
 {
     if(channel >= num_channels) return;
