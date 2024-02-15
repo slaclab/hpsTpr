@@ -21,6 +21,8 @@ static unsigned triggerPolarity = 1;
 static unsigned triggerDelay = 1;
 static unsigned triggerWidth = 0;
 static bool     verbose = false;
+static bool     markerRev = false;
+static bool     checkBSA  = false;
 
 enum TimingMode { LCLS1=0, LCLS2=1, UED=2 };
 
@@ -29,13 +31,14 @@ extern int optind;
 static void link_test          (TprReg&, TimingMode, bool lring);
 static void frame_rates        (TprReg&, TimingMode);
 static void frame_capture      (TprReg&, char, TimingMode);
-static void dump_frame         (const uint32_t*);
-static bool parse_frame        (const uint32_t*, uint64_t&, uint64_t&);
-static bool parse_bsa_event    (const uint32_t*, uint64_t&, uint64_t&,
+static void dump_frame         (volatile const uint32_t*);
+static bool parse_frame        (volatile const uint32_t*, uint64_t&, uint64_t&);
+static bool parse_bsa_event    (volatile const uint32_t*, uint64_t&, uint64_t&,
                                 uint64_t&, uint64_t&, uint64_t&);
-static bool parse_bsa_control  (const uint32_t*, uint64_t&, uint64_t&,
+static bool parse_bsa_control  (volatile const uint32_t*, uint64_t&, uint64_t&,
                                 uint64_t&, uint64_t&, uint64_t&);
 static void generate_triggers  (TprReg&, TimingMode);
+static void generate_refclk    (TprReg&, bool, TimingMode);
 
 static void usage(const char* p) {
   printf("Usage: %s [options]\n",p);
@@ -45,8 +48,11 @@ static void usage(const char* p) {
   printf("          -U        : test UED     timing\n");
   printf("          -n        : skip frame capture test\n");
   printf("          -r        : dump ring buffers\n");
+  printf("          -B        : check BSA\n");
+  printf("          -C        : enable 10MHz refclk\n");
   printf("          -D delay[,width[,polarity]]  : trigger parameters\n");
   printf("          -T <sec>  : link test period\n");
+  printf("          -v        : verbose\n");
 }
 
 int main(int argc, char** argv) {
@@ -60,9 +66,10 @@ int main(int argc, char** argv) {
   TimingMode tmode = LCLS1;
   bool lFrameTest = true;
   bool lDumpRingb = false;
+  bool refClkEn = false;
   char* endptr;
 
-  while ( (c=getopt( argc, argv, "12Ud:nrT:D:h?")) != EOF ) {
+  while ( (c=getopt( argc, argv, "12Ud:nrT:D:BCvh?")) != EOF ) {
     switch(c) {
     case '1': tmode = LCLS1; break;
     case '2': tmode = LCLS2; break;
@@ -76,6 +83,12 @@ int main(int argc, char** argv) {
         lUsage = true;
       }
       break;
+    case 'B':
+      checkBSA = true;
+      break;
+    case 'C':
+      refClkEn = true;
+      break;
     case 'D':
       triggerWidth = 1;
       triggerDelay = strtoul(optarg,&endptr,0);
@@ -87,6 +100,7 @@ int main(int argc, char** argv) {
     case 'T':
       linktest_period = strtoul(optarg,NULL,0);
       break;
+    case 'v': verbose = true; break;
     case 'h':
       usage(argv[0]);
       exit(0);
@@ -161,6 +175,11 @@ int main(int argc, char** argv) {
       //
       if (triggerWidth)
         generate_triggers(reg, tmode);
+
+      //
+      //  Generate reference clock
+      //
+      generate_refclk(reg, refClkEn, tmode);
     }
   }
 
@@ -287,8 +306,11 @@ void frame_rates(TprReg& reg, TimingMode tmode)
   for(unsigned i=0; i<nrates; i++)
     rates[i] = reg.base.channel[i].evtCount;
 
+  // Detect where the 1Hz rate is programmed
+  markerRev = rates[0]==1;
+
   for(unsigned i=0; i<nrates; i++) {
-    unsigned rate = rates[i];
+    unsigned rate = rates[markerRev ? 6-i:i];
     printf("FixedRate[%i]: %7u  %s\n",
            i, rate,
            (rate > rateMin[ilcls][i] &&
@@ -322,12 +344,12 @@ void frame_capture(TprReg& reg, char tprid, TimingMode tmode )
 
   reg.base.dump();
 
-  unsigned urate   = tmode!=LCLS1 ? 0 : (1<<11) | (0x3f<<3); // max rate
+  unsigned urate   = tmode!=LCLS1 ? (markerRev?6:0) : (1<<11) | (0x3f<<3); // max rate
   unsigned destsel = 1<<17; // BEAM - DONT CARE
   reg.base.channel[_channel].evtSel = (destsel<<13) | (urate<<0);
   reg.base.channel[_channel].bsaDelay = 0;
   reg.base.channel[_channel].bsaWidth = 1;
-  reg.base.channel[_channel].control = ucontrol | 1;
+  reg.base.channel[_channel].control = ucontrol | 5;
 
   //  follow bsa
 
@@ -353,7 +375,7 @@ void frame_capture(TprReg& reg, char tprid, TimingMode tmode )
 
   int64_t allrp = q.allwp[idx];
   int64_t bsarp = q.bsawp;
-  printf("allrp %llx  q.allwp[%d] %llx\n", allrp, idx, q.allwp[idx]);
+  printf("allrp %#lx  q.allwp[%d] %#lx\n", (uint64_t) allrp, idx, (uint64_t) q.allwp[idx]);
 
   read(fd, buff, 32);
   read(fdbsa, buff, 32);
@@ -366,10 +388,9 @@ void frame_capture(TprReg& reg, char tprid, TimingMode tmode )
   unsigned nframes=0;
 
   do {
-    printf("allrp %llx  q.allwp[%d] %llx\n", allrp, idx, q.allwp[idx]);
+    printf("allrp %#lx  q.allwp[%d] %#lx\n", (uint64_t) allrp, idx, (uint64_t) q.allwp[idx]);
     while(allrp < q.allwp[idx] && nframes<10) {
-      const uint32_t* p;
-        p = (const uint32_t *)
+      volatile const uint32_t* p = reinterpret_cast<volatile const uint32_t*>
         (&q.allq[q.allrp[idx].idx[allrp &(MAX_TPR_ALLQ-1)] &(MAX_TPR_ALLQ-1) ].word[0]);
       if (verbose)
         dump_frame(p);
@@ -394,49 +415,50 @@ void frame_capture(TprReg& reg, char tprid, TimingMode tmode )
   } while(1);
 
 
-  uint64_t active, avgdn, update, init, minor, major;
-  nframes = 0;
-  do {
-    while(bsarp < q.bsawp && nframes<10) {
-      const uint32_t* p;
-        p = (const uint32_t *)
-        (&q.bsaq[bsarp &(MAX_TPR_BSAQ-1)].word[0]);
-      if (parse_bsa_control(p, pulseId, timeStamp, init, minor, major)) {
-        printf(" 0x%016llx %9u.%09u I%016llx m%016llx M%016llx\n",
-               (unsigned long long)pulseId,
-               unsigned(timeStamp>>32),
-               unsigned(timeStamp&0xffffffff),
-               (unsigned long long)init,
-               (unsigned long long)minor,
-               (unsigned long long)major);
+  if (checkBSA) {
+    uint64_t active, avgdn, update, init, minor, major;
+    nframes = 0;
+    do {
+      while(bsarp < q.bsawp && nframes<10) {
+        volatile uint32_t* p = reinterpret_cast<volatile uint32_t*>
+          (&q.bsaq[bsarp &(MAX_TPR_BSAQ-1)].word[0]);
+        if (parse_bsa_control(p, pulseId, timeStamp, init, minor, major)) {
+          printf(" 0x%016llx %9u.%09u I%016llx m%016llx M%016llx\n",
+                 (unsigned long long)pulseId,
+                 unsigned(timeStamp>>32),
+                 unsigned(timeStamp&0xffffffff),
+                 (unsigned long long)init,
+                 (unsigned long long)minor,
+                 (unsigned long long)major);
+        }
+        if (parse_bsa_event(p, pulseId, timeStamp, active, avgdn, update)) {
+          printf(" 0x%016llx %9u.%09u A%016llx D%016llx U%016llx\n",
+                 (unsigned long long)pulseId,
+                 unsigned(timeStamp>>32),
+                 unsigned(timeStamp&0xffffffff),
+                 (unsigned long long)active,
+                 (unsigned long long)avgdn,
+                 (unsigned long long)update);
+          nframes++;
+        }
+        bsarp++;
       }
-      if (parse_bsa_event(p, pulseId, timeStamp, active, avgdn, update)) {
-        printf(" 0x%016llx %9u.%09u A%016llx D%016llx U%016llx\n",
-               (unsigned long long)pulseId,
-               unsigned(timeStamp>>32),
-               unsigned(timeStamp&0xffffffff),
-               (unsigned long long)active,
-               (unsigned long long)avgdn,
-               (unsigned long long)update);
-        nframes++;
-      }
-      bsarp++;
-    }
-    if (nframes>=10)
-      break;
-    read(fdbsa, buff, 32);
-  } while(1);
+      if (nframes>=10)
+        break;
+      read(fdbsa, buff, 32);
+    } while(1);
+  }
 
   munmap(ptr, sizeof(TprQueues));
   close(fd);
   close(fdbsa);
 }
 
-void dump_frame(const uint32_t* p)
+void dump_frame(volatile const uint32_t* p)
 {
   char m = p[0]&(0x808<<20) ? 'D':' ';
   if (((p[0]>>16)&0xf)==0) {
-    const uint64_t* pl = reinterpret_cast<const uint64_t*>(p+2);
+    volatile const uint64_t* pl = reinterpret_cast<volatile const uint64_t*>(p+2);
     printf("EVENT LCLS%c chmask [x%x] [x%x] %c: %16lx %16lx",
            (p[0]&(1<<22)) ? '1':'2',
            (p[0]>>0)&0xffff,p[1],m,pl[0],pl[1]);
@@ -446,12 +468,12 @@ void dump_frame(const uint32_t* p)
   }
 }
 
-bool parse_frame(const uint32_t* p,
+bool parse_frame(volatile const uint32_t* p,
                  uint64_t& pulseId, uint64_t& timeStamp)
 {
   //  char m = p[0]&(0x808<<20) ? 'D':' ';
   if (((p[0]>>16)&0xf)==0) { // EVENT_TAG
-    const uint64_t* pl = reinterpret_cast<const uint64_t*>(p+2);
+    volatile const uint64_t* pl = reinterpret_cast<volatile const uint64_t*>(p+2);
     pulseId = pl[0];
     timeStamp = pl[1];
     return true;
@@ -459,27 +481,28 @@ bool parse_frame(const uint32_t* p,
   return false;
 }
 
-bool parse_bsa_event(const uint32_t* p,
+bool parse_bsa_event(volatile const uint32_t* p,
                      uint64_t& pulseId, uint64_t& timeStamp,
                      uint64_t& active, uint64_t& avgdone, uint64_t& update)
 {
   if (((p[0]>>16)&0xf)==2) { // BSAEVNT_TAG
-    const uint64_t* pl = reinterpret_cast<const uint64_t*>(p+1);
+    volatile const uint64_t* pl = reinterpret_cast<volatile const uint64_t*>(p+1);
     pulseId   = pl[0];
     active    = pl[1];
     avgdone   = pl[2];
     timeStamp = pl[3];
+    update    = pl[4];
     return true;
   }
   return false;
 }
 
-bool parse_bsa_control(const uint32_t* p,
+bool parse_bsa_control(volatile const uint32_t* p,
                        uint64_t& pulseId, uint64_t& timeStamp,
                        uint64_t& init, uint64_t& minor, uint64_t& major)
 {
   if (((p[0]>>16)&0xf)==1) { // BSACNTL_TAG
-    const uint64_t* pl = reinterpret_cast<const uint64_t*>(p+1);
+    volatile const uint64_t* pl = reinterpret_cast<volatile const uint64_t*>(p+1);
     pulseId   = pl[0];
     timeStamp = pl[1];
     init      = pl[2];
@@ -510,4 +533,11 @@ void generate_triggers(TprReg& reg, TimingMode tmode)
   reg.base.channel[_channel].control = ucontrol | 1;
 
   reg.base.dump();
+}
+
+void generate_refclk(TprReg& reg, bool enable, TimingMode tmode)
+{
+    reg.refclk.clkSel(tmode!=LCLS1);
+  reg.refclk.dump();
+  reg.csr.enableRefClk(enable);
 }
