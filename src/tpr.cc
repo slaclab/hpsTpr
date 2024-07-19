@@ -11,6 +11,7 @@
 
 #include <unistd.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 using namespace Tpr;
 
@@ -281,7 +282,7 @@ void RingB::dumpFrames() const
     v = (v>>16) | (uint64_t(data[j++])<<48);    \
     v = (v>>16) | (uint64_t(data[j++])<<48);    \
     v = (v>>16) | (uint64_t(data[j++])<<48);    \
-    printf("%16lx ",v);                         \
+    printf("%16" PRIx64 " ",v);                 \
   }
   printf("%8.8s %16.16s %16.16s %8.8s %8.8s %16.16s %16.16s %16.16s %16.16s\n",
          "Version","PulseID","TimeStamp","Markers","BeamReq",
