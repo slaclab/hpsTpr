@@ -403,7 +403,7 @@ void frame_capture(TprReg& reg, char tprid, TimingMode tmode )
   } while(1);
 
 
-  uint64_t active, avgdn, update, init, minor, major;
+  uint64_t active, avgdn, update = 0, init, minor, major;
   nframes = 0;
   do {
     while(bsarp < q.bsawp && nframes<10) {
