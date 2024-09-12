@@ -43,6 +43,10 @@ class EvrCardG2Prom {
       //! Deconstructor
       ~EvrCardG2Prom ( );
 
+      void setPromSize (uint32_t promSize);
+
+      uint32_t getPromSize (string pathToFile);
+
       //! Check for a valid firmware version
       bool checkFirmwareVersion ( );
 
@@ -63,12 +67,16 @@ class EvrCardG2Prom {
 
    private:
       // Local Variables
-      string filePath;
+      string   filePath;
+      bool     promType_;
+      uint32_t promSize_;
       void volatile *mapVersion;
+      void volatile *mapPromType;
       void volatile *mapBuild;
       void volatile *mapData;
       void volatile *mapAddress;
       void volatile *mapRead;
+      void volatile *mapTest;
 
       //! Erase Command
       void eraseCommand(uint32_t address);
@@ -90,5 +98,8 @@ class EvrCardG2Prom {
 
       //! Generic FLASH read Command
       uint16_t readFlash(uint32_t address, uint16_t cmd);
+
+      //! Reset the PROM (new PROM only)
+      void resetProm();
 };
 #endif

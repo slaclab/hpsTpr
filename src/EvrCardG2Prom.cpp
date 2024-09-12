@@ -26,6 +26,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <iomanip>
+#include <unistd.h>
+#include <cmath>
 
 #include "EvrCardG2Prom.h"
 #include "McsRead.h"
@@ -42,16 +44,25 @@ using namespace std;
 #define CONFIG_REG      0xFD4F
 
 // Constructor
-EvrCardG2Prom::EvrCardG2Prom (void volatile *mapStart, string pathToFile ) {
+EvrCardG2Prom::EvrCardG2Prom (void volatile *mapStart, string pathToFile )
+{
    // Set the file path
    filePath = pathToFile;
 
+   // Default PROM size without user data
+   promSize_      = PROM_SIZE;
+
+   // Default PROM type = Legacy (TRUE)
+   promType_ = true;
+
    // Setup the register Mapping
    mapVersion = (void volatile *)((uint64_t)mapStart+0x10000);// Firmware version
+   mapPromType= (void volatile *)((uint64_t)mapStart+0x10400);// PROM Type
    mapBuild   = (void volatile *)((uint64_t)mapStart+0x10800);// Build string
    mapData    = (void volatile *)((uint64_t)mapStart+0x20000);// Write Cmd/Data Bus
    mapAddress = (void volatile *)((uint64_t)mapStart+0x20004);// Write/Read CMD + Address Bus
    mapRead    = (void volatile *)((uint64_t)mapStart+0x20008);// Read Data Bus
+   mapTest    = (void volatile *)((uint64_t)mapStart+0x2000C);// Test Reg
 
    // Setup the configuration Register
    writeToFlash(CONFIG_REG,0x60,0x03);
@@ -61,13 +72,33 @@ EvrCardG2Prom::EvrCardG2Prom (void volatile *mapStart, string pathToFile ) {
 EvrCardG2Prom::~EvrCardG2Prom ( ) {
 }
 
+void EvrCardG2Prom::setPromSize (uint32_t promSize) {
+   promSize_ = promSize;
+}
+
+uint32_t EvrCardG2Prom::getPromSize (string pathToFile) {
+   McsRead mcsReader;
+   uint32_t retVar;
+   printf("Current PROM Size = 0x%08x\n", promSize_);
+   mcsReader.open(pathToFile);
+   printf("Calculating PROM file (.mcs) Memory Address size ...\n");
+   retVar = mcsReader.addrSize();
+   printf("Calculated PROM Size = 0x%08x\n", retVar);
+   mcsReader.close();
+   return retVar;
+}
+
 //! Check for a valid firmware version  (true=valid firmware version)
 bool EvrCardG2Prom::checkFirmwareVersion ( ) {
    uint32_t firmwareVersion = *((uint32_t*)mapVersion);
+   uint32_t promType = *((uint32_t*)mapPromType);
    uint32_t EvrCardGen = firmwareVersion >> 12;
    uint32_t i;
    uint32_t BuildStamp[64];
 
+   if(EvrCardGen==GEN2_MASK){
+      cout << "Found Gen 2 EVR card!" << endl;
+   }
    cout << "*******************************************************************" << endl;
    cout << "Current Firmware Version on the FPGA: 0x" << hex << firmwareVersion << endl;
    for (i=0; i < 64; i++) {
@@ -75,14 +106,33 @@ bool EvrCardG2Prom::checkFirmwareVersion ( ) {
    }
    cout << "Current BuildStamp: "   << string((char *)BuildStamp)  << endl;
 
-   return true;
+//   return true;
    if(EvrCardGen!=GEN2_MASK){
    cout << "*******************************************************************" << endl;
       cout << "Error: Not a generation 2 EVR card" << endl;
       return false;
-   } else {
-      return true;
    }
+
+   if(firmwareVersion<0xCED20030) {
+      // PROM type = Legacy (TRUE)
+      promType_ = true;
+   } else {
+      // PROM type = PROM_VERSION FPGA input pin
+      promType_ = bool(promType&0x1);
+   }
+
+   if(promType_){
+      cout << "Legacy PROM TYPE Detected!!!" << endl;
+      // Enable CMD
+      *((uint32_t*)mapTest) = 0x0;
+   } else {
+      cout << "New PROM TYPE Detected!!!" << endl;
+      // bypass CMD
+      *((uint32_t*)mapTest) = 0x1;
+      resetProm();
+   }
+
+   return true;
 }
 
 //! Check if file exist (true=exists)
@@ -96,10 +146,8 @@ void EvrCardG2Prom::rebootReminder ( ) {
    cout << "\n\n\n\n\n";
    cout << "***************************************" << endl;
    cout << "***************************************" << endl;
-   cout << "The new data written in the PROM has " << endl;
-   cout << "has been loaded into the FPGA. " << endl<< endl;
-   cout << "A reboot or power cycle is required " << endl;
-   cout << "to re-enumerate the PCIe card." << endl;
+   cout << "A power cycle (or 'COLD' reboot) is required " << endl;
+   cout << "to load new into the PCIe card's FPGA." << endl;
    cout << "***************************************" << endl;
    cout << "***************************************" << endl;
    cout << "\n\n\n\n\n";
@@ -109,20 +157,54 @@ void EvrCardG2Prom::rebootReminder ( ) {
 void EvrCardG2Prom::eraseBootProm ( ) {
 
    uint32_t address = 0;
-   double size = double(PROM_SIZE);
+   double size = double(promSize_);
 
    cout << "*******************************************************************" << endl;
    cout << "Starting Erasing ..." << endl;
-   while(address<=PROM_SIZE) {
-      // Print the status to screen
-      cout << hex << "Erasing PROM from 0x" << address << " to 0x" << (address+PROM_BLOCK_SIZE-1);
-      cout << setprecision(3) << " ( " << ((double(address))/size)*100 << " percent done )" << endl;
 
-      // execute the erase command
-      eraseCommand(address);
+   if(promType_){
 
-      //increment the address pointer
-      address += PROM_BLOCK_SIZE;
+      while(address<=promSize_) {
+         // Print the status to screen
+         cout << hex << "Erasing PROM from 0x" << address << " to 0x" << (address+PROM_BLOCK_SIZE-1);
+         cout << setprecision(3) << " ( " << ((double(address))/size)*100 << " percent done )" << endl;
+
+         // execute the erase command
+         eraseCommand(address);
+
+         //increment the address pointer
+         address += PROM_BLOCK_SIZE;
+      }
+
+   } else {
+      // ENTER NONVOLATILE PROTECTION COMMAND SET (C0h)
+      writeToFlash(0x555,0,0xAA);
+      writeToFlash(0x2AA,0,0x55);
+      writeToFlash(0x555,0,0xC0);
+      usleep(1);
+      // CLEAR ALL NONVOLATILE PROTECTION BITS (80h/30h)
+      writeToFlash(0x555,0,0x80);
+      writeToFlash(0x000,0,0x30);
+      sleep(2); // Clear nonvolatile protection bit time (max) = 1100 ms
+      // EXIT LOCK REGISTER (90h/00h)
+      writeToFlash(0x000,0,0x90);
+      writeToFlash(0x000,0,0x00);
+      usleep(1);
+      // CHIP ERASE (80/10h)
+      writeToFlash(0x555,0,0xAA);
+      writeToFlash(0x2AA,0,0x55);
+      writeToFlash(0x555,0,0x80);
+      writeToFlash(0x555,0,0xAA);
+      writeToFlash(0x2AA,0,0x55);
+      writeToFlash(0x555,0,0x10);
+
+      // Typical timeout for full chip erase = 66s
+      // Maximum timeout for full chip erase = 528s
+      for (int i=0; i<20; i++) {
+         // Print the status to screen
+         cout << hex << "Erasing PROM: " << round(100.0*float(3*i)/60.0) << " percent done " << endl;
+         sleep(6);
+      }
    }
    cout << "Erasing completed" << endl;
 }
@@ -142,7 +224,7 @@ bool EvrCardG2Prom::bufferedWriteBootProm ( ) {
    uint16_t bufData[256];
    uint16_t bufSize = 0;
 
-   double size = double(PROM_SIZE);
+   double size = double(promSize_);
    double percentage;
    double skim = 5.0;
    bool   toggle = false;
@@ -191,7 +273,7 @@ bool EvrCardG2Prom::bufferedWriteBootProm ( ) {
          percentage *= 2.0;//factor of two from two 8-bit reads for every write 16 bit write
          if(percentage>=skim) {
             skim += 5.0;
-            cout << "Writing the PROM: " << percentage << " percent done" << endl;
+            cout << "Writing the PROM: " << round(percentage) << " percent done" << endl;
          }
       }
    }
@@ -220,7 +302,7 @@ bool EvrCardG2Prom::verifyBootProm ( ) {
 
    uint32_t address = 0;
    uint16_t promData,fileData;
-   double size = double(PROM_SIZE);
+   double size = double(promSize_);
    double percentage;
    double skim = 5.0;
    bool   toggle = false;
@@ -267,7 +349,7 @@ bool EvrCardG2Prom::verifyBootProm ( ) {
          percentage *= 2.0;//factore of two from two 8-bit reads for every write 16 bit write
          if(percentage>=skim) {
             skim += 5.0;
-            cout << "Verifying the PROM: " << percentage << " percent done" << endl;
+            cout << "Verifying the PROM: " << round(percentage) << " percent done" << endl;
          }
       }
    }
@@ -361,55 +443,80 @@ void EvrCardG2Prom::bufferedProgramCommand(uint32_t *address, uint16_t *data, ui
    uint16_t status = 0;
    uint16_t i;
 
-   // Unlock the Block
-   writeToFlash(address[0],0x60,0xD0);
+   if(promType_){
 
-   // Reset the status register
-   writeToFlash(address[0],0x50,0x50);
+      // Unlock the Block
+      writeToFlash(address[0],0x60,0xD0);
 
-   // Send the buffer program command and size
-   writeToFlash(address[0],0xE8,(size-1));
+      // Reset the status register
+      writeToFlash(address[0],0x50,0x50);
 
-   // Load the buffer
-   for(i=0;i<size;i++) {
-      readFlash(address[i],data[i]);
-   }
+      // Send the buffer program command and size
+      writeToFlash(address[0],0xE8,(size-1));
 
-   // Confirm buffer programming
-   readFlash(address[0],0xD0);
-
-   while(1) {
-      // Get the status register
-      status = readFlash(address[0],0x70);
-
-      // Check for programming failure
-      if ( (status&0x10) != 0 ) {
-
-         // Unlock the Block
-         writeToFlash(address[0],0x60,0xD0);
-
-         // Reset the status register
-         writeToFlash(address[0],0x50,0x50);
-
-         // Send the buffer program command and size
-         writeToFlash(address[0],0xE8,(size-1));
-
-         // Load the buffer
-         for(i=0;i<size;i++) {
-            readFlash(address[i],data[i]);
-         }
-
-         // Confirm buffer programming
-         readFlash(address[0],0xD0);
-
-      // Check for FLASH not busy
-      } else if ( (status&0x80) != 0 ) {
-         break;
+      // Load the buffer
+      for(i=0;i<size;i++) {
+         readFlash(address[i],data[i]);
       }
-   }
 
-   // Lock the Block
-   writeToFlash(address[0],0x60,0x01);
+      // Confirm buffer programming
+      readFlash(address[0],0xD0);
+
+      while(1) {
+         // Get the status register
+         status = readFlash(address[0],0x70);
+
+         // Check for programming failure
+         if ( (status&0x10) != 0 ) {
+
+            // Unlock the Block
+            writeToFlash(address[0],0x60,0xD0);
+
+            // Reset the status register
+            writeToFlash(address[0],0x50,0x50);
+
+            // Send the buffer program command and size
+            writeToFlash(address[0],0xE8,(size-1));
+
+            // Load the buffer
+            for(i=0;i<size;i++) {
+               readFlash(address[i],data[i]);
+            }
+
+            // Confirm buffer programming
+            readFlash(address[0],0xD0);
+
+         // Check for FLASH not busy
+         } else if ( (status&0x80) != 0 ) {
+            break;
+         }
+      }
+
+      // Lock the Block
+      writeToFlash(address[0],0x60,0x01);
+
+   } else {
+
+      // WRITE TO BUFFER PROGRAM (25h)
+      writeToFlash(0x555,0,0xAA);
+      writeToFlash(0x2AA,0,0x55);
+      writeToFlash(address[0],0,0x25);
+      writeToFlash(address[0],0,(size-1));
+      usleep(1);
+
+      // Loop through the buffer data
+      for (i=0; i<size; i++) {
+         writeToFlash(address[i],0,data[i]);
+      }
+      usleep(1);
+
+      // WRITE TO BUFFER PROGRAM CONFIRM (29h)
+      writeToFlash(address[0],0,0x29);
+
+      // Typical timeout for buffer program = 512μs
+      // Maximum timeout for buffer program = 2048μs
+      usleep(2048);
+   }
 }
 
 //! Read FLASH memory Command
@@ -426,6 +533,7 @@ uint32_t EvrCardG2Prom::genReqWord(uint16_t cmd, uint16_t data) {
 
 //! Generic FLASH write Command
 void EvrCardG2Prom::writeToFlash(uint32_t address, uint16_t cmd, uint16_t data) {
+//   cout << "writeToFlash( 0x"<<hex<<address << ", 0x" << cmd << ", 0x" << data << ")" << endl;
    // Set the data bus
    *((uint32_t*)mapData) = genReqWord(cmd,data);
 
@@ -448,4 +556,12 @@ uint16_t EvrCardG2Prom::readFlash(uint32_t address, uint16_t cmd) {
 
    // return the readout data
    return (uint16_t)(readReg&0xFFFF);
+}
+
+//! Reset the PROM (new PROM only)
+void EvrCardG2Prom::resetProm() {
+   writeToFlash(0x1A2,0,0xFFFF);
+   writeToFlash(0x555,0,0xAA);
+   writeToFlash(0x2AA,0,0x55);
+   writeToFlash(0x000,0,0xF0);
 }

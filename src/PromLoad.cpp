@@ -22,6 +22,7 @@
 #include <unistd.h>
 
 #include "EvrCardG2Prom.h"
+#include "PromLoad.h"
 
 using namespace std;
 
@@ -31,10 +32,8 @@ int main (int argc, char **argv) {
 
    int fd;
    void volatile *mapStart;
-   void volatile *reboot;
-   EvrCardG2Prom *prom;
    string filePath;
-   string devName = argv[1];
+   string devName;
 
    // Check the number of arguments
    if ( argc != 3 ) {
@@ -45,6 +44,7 @@ int main (int argc, char **argv) {
    filePath = argv[2];
 
 	// Open the PCIe device
+  cout << "Opening " << devName << endl;
    if ( (fd = open(devName.c_str(), (O_RDWR|O_SYNC)) ) <= 0 ) {
       cout << "Error opening " << devName << endl;
       close(fd);
@@ -59,24 +59,43 @@ int main (int argc, char **argv) {
       return(1);
    }
 
-   // Mapping the reboot register
-   reboot = (void volatile *)((uint64_t)mapStart+0x1001C);
+   int status = PromLoad( mapStart, filePath );
+   close(fd);
+   return(status);
+}
 
+
+int PromLoad (volatile void *mapStart, string filePath)
+{
+//  cout << "mapStart = 0x" << hex << mapStart << endl;
+   if(mapStart == MAP_FAILED){
+      cout << "Error: mmap() = " << dec << mapStart << endl;
+      return(1);
+   }
+
+   cout << "Creating EvrCardG2Prom" << endl;
    // Create the EvrCardG2Prom object
+   EvrCardG2Prom *prom;
    prom = new EvrCardG2Prom(mapStart,filePath);
 
    // Check if the .mcs file exists
    if(!prom->fileExist()){
       cout << "Error opening: " << filePath << endl;
       delete prom;
-      close(fd);
       return(1);
    }
 
+   uint32_t	promSize = prom->getPromSize(filePath);
+   cout << "promSize = 0x" << hex << promSize << endl;
+#if 0
+   // Get & Set the FPGA's PROM code size
+   prom->setPromSize(promSize);
+#endif
+
    // Check if the PCIe device is a generation 2 card
    if(!prom->checkFirmwareVersion()){
+      cout << "checkFirmwareVersion Error: Not a gen 2 card!" << endl;
       delete prom;
-      close(fd);
       return(1);
    }
 
@@ -87,7 +106,6 @@ int main (int argc, char **argv) {
    if(!prom->bufferedWriteBootProm()) {
       cout << "Error in prom->bufferedWriteBootProm() function" << endl;
       delete prom;
-      close(fd);
       return(1);
    }
 
@@ -95,18 +113,13 @@ int main (int argc, char **argv) {
    if(!prom->verifyBootProm()) {
       cout << "Error in prom->verifyBootProm() function" << endl;
       delete prom;
-      close(fd);
       return(1);
    }
 
    // Display Reminder
    prom->rebootReminder();
 
-   // Reboot the FGPA
-   *((uint32_t*)reboot) = 0x1;
-
 	// Close all the devices
    delete prom;
-   close(fd);
    return(0);
 }
