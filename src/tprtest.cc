@@ -1,3 +1,12 @@
+//////////////////////////////////////////////////////////////////////////////
+// This file is part of 'hpsTpr'.
+// It is subject to the license terms in the LICENSE.txt file found in the 
+// top-level directory of this distribution and at: 
+//    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html. 
+// No part of 'hpsTpr', including this file, 
+// may be copied, modified, propagated, or distributed except according to 
+// the terms contained in the LICENSE.txt file.
+//////////////////////////////////////////////////////////////////////////////
 
 #include <stdio.h>
 #include <unistd.h>
@@ -274,13 +283,13 @@ void frame_rates(TprReg& reg, TimingMode tmode)
   unsigned ilcls = unsigned(tmode);
   unsigned rates[nrates];
   static const unsigned rateMin[][7] = {
-      {    356,   116,   56,  27,  8, 3, 0 },
-      { 909999, 69999, 9999, 999, 99, 9, 0 },
-      { 499999, 71427, 9999, 999, 99, 9, 0 } };
+      {356,   116,   56,  27,  8, 3, 0 },
+      {0, 9, 99, 999, 9999, 69999, 909999},
+      {0, 9, 99, 999, 9999, 71427, 499999} };
   static const unsigned rateMax[][7] = {
-      {    364,   124,    64,   33,  12,  7, 2, },
-      { 910001, 70001, 10001, 1001, 101, 11, 2, },
-      { 500001, 71429, 10001, 1001, 101, 11, 2 } };
+      {364,   124,    64,   33,  12,  7, 2 },
+      {2, 11, 101, 1001, 10001, 70001, 910001},
+      {2, 11, 101, 1001, 10001, 71429, 500001} };
 
   for(unsigned i=0; i<nrates; i++) {
     if (ilcls) // FixedRate
@@ -416,7 +425,7 @@ void frame_capture(TprReg& reg, char tprid, TimingMode tmode )
 
 
   if (checkBSA) {
-    uint64_t active, avgdn, update, init, minor, major;
+    uint64_t active, avgdn, update = 0, init, minor, major;
     nframes = 0;
     do {
       while(bsarp < q.bsawp && nframes<10) {

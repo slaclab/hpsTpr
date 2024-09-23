@@ -1,3 +1,12 @@
+//////////////////////////////////////////////////////////////////////////////
+// This file is part of 'hpsTpr'.
+// It is subject to the license terms in the LICENSE.txt file found in the 
+// top-level directory of this distribution and at: 
+//    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html. 
+// No part of 'hpsTpr', including this file, 
+// may be copied, modified, propagated, or distributed except according to 
+// the terms contained in the LICENSE.txt file.
+//////////////////////////////////////////////////////////////////////////////
 #include <cpsw_api_builder.h>
 #include <cpsw_api_user.h>
 
@@ -149,7 +158,7 @@ void TprTriggerYaml::InitLCLS1Mode(void)
     uint32_t zero(0), dontcare(0x20000);
     CPSW_TRY_CATCH(_clkSel->setVal(&zero));         /* Select LCLS1 mode clock */
     
-    for(uint32_t i = 0; i < num_channels; i++) {
+    for(uint32_t i = 0; i < (uint32_t)num_channels; i++) {
         CPSW_TRY_CATCH(_chnDestSelect[i]->setVal(&dontcare));  /* destination, don't care */
         CPSW_TRY_CATCH(_trgSourceMask[i]->setVal(&i));         /* one to one mapping between channel and trigger */
     }
@@ -366,7 +375,7 @@ void TprTriggerYaml::SetComplTrg(int trigger, uint32_t comp)
             break;
     }
 
-    if(_debug_) printf("TprTriggerYaml (%d): compl_trigger(trg %x, comm %8.8lx)\n", this, trigger, (unsigned long) comp);
+    if(_debug_) printf("TprTriggerYaml (%p): compl_trigger(trg %x, comm %8.8lx)\n", this, trigger, (unsigned long) comp);
 }
 
 void TprTriggerYaml::SetDelayTap(int trigger, uint32_t tap)
@@ -379,7 +388,7 @@ void TprTriggerYaml::SetDelayTap(int trigger, uint32_t tap)
 
 void TprTriggerYaml::report(void)
 {
-    char *str_bus_type;
+    const char *str_bus_type = NULL;
     switch(bus_type) {
         case _atca:
             str_bus_type = "ATCA TPR";

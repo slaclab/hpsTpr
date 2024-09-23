@@ -1,3 +1,10 @@
+R2.5.1       Sep 23, 2024     Kukhee Kim
+             - resolve firmware programming failure in linuxRT
+               (caused by stricker compile rules in linuxRT for volatile in force type casing)
+             - aligne with recent PromLoad CLI update in the evr-card-g2 project
+             - add support for both Legacy PROM (back-to-back easing)
+               and new PROM ( using erase command)
+
 R2.5.0       Apr 12, 2023     Kukhee Kim
              - add SetPartition method to the tprTrigger (requested by Mike Browne)
 

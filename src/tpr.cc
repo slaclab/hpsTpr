@@ -1,7 +1,17 @@
+//////////////////////////////////////////////////////////////////////////////
+// This file is part of 'hpsTpr'.
+// It is subject to the license terms in the LICENSE.txt file found in the 
+// top-level directory of this distribution and at: 
+//    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html. 
+// No part of 'hpsTpr', including this file, 
+// may be copied, modified, propagated, or distributed except according to 
+// the terms contained in the LICENSE.txt file.
+//////////////////////////////////////////////////////////////////////////////
 #include "tpr.hh"
 
 #include <unistd.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 using namespace Tpr;
 
@@ -380,7 +390,7 @@ void RingB::dumpFrames() const
     v = (v>>16) | (uint64_t(data[j++])<<48);    \
     v = (v>>16) | (uint64_t(data[j++])<<48);    \
     v = (v>>16) | (uint64_t(data[j++])<<48);    \
-    printf("%16lx ",v);                         \
+    printf("%16" PRIx64 " ",v);                 \
   }
   printf("%8.8s %16.16s %16.16s %8.8s %8.8s %16.16s %16.16s %16.16s %16.16s\n",
          "Version","PulseID","TimeStamp","Markers","BeamReq",
